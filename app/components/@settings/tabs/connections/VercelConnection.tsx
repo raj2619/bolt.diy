@@ -18,6 +18,15 @@ export default function VercelConnection() {
   const fetchingStats = useStore(isFetchingStats);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
 
+  // NEW: Auto-connect from environment variable
+  useEffect(() => {
+    const envToken = import.meta.env.VITE_VERCEL_TOKEN;
+
+    if (envToken && !connection.token) {
+      updateVercelConnection({ ...connection, token: envToken });
+    }
+  }, []);
+
   useEffect(() => {
     const fetchProjects = async () => {
       if (connection.user && connection.token) {
@@ -45,7 +54,7 @@ export default function VercelConnection() {
 
       const userData = (await response.json()) as any;
       updateVercelConnection({
-        user: userData.user || userData, // Handle both possible structures
+        user: userData.user || userData,
         token: connection.token,
       });
 
@@ -65,8 +74,6 @@ export default function VercelConnection() {
     updateVercelConnection({ user: null, token: '' });
     toast.success('Disconnected from Vercel');
   };
-
-  console.log('connection', connection);
 
   return (
     <motion.div
@@ -91,35 +98,37 @@ export default function VercelConnection() {
 
         {!connection.user ? (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-bolt-elements-textSecondary mb-2">Personal Access Token</label>
-              <input
-                type="password"
-                value={connection.token}
-                onChange={(e) => updateVercelConnection({ ...connection, token: e.target.value })}
-                disabled={connecting}
-                placeholder="Enter your Vercel personal access token"
-                className={classNames(
-                  'w-full px-3 py-2 rounded-lg text-sm',
-                  'bg-[#F8F8F8] dark:bg-[#1A1A1A]',
-                  'border border-[#E5E5E5] dark:border-[#333333]',
-                  'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary',
-                  'focus:outline-none focus:ring-1 focus:ring-bolt-elements-borderColorActive',
-                  'disabled:opacity-50',
-                )}
-              />
-              <div className="mt-2 text-sm text-bolt-elements-textSecondary">
-                <a
-                  href="https://vercel.com/account/tokens"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-bolt-elements-borderColorActive hover:underline inline-flex items-center gap-1"
-                >
-                  Get your token
-                  <div className="i-ph:arrow-square-out w-4 h-4" />
-                </a>
+            {!import.meta.env.VITE_VERCEL_TOKEN && (
+              <div>
+                <label className="block text-sm text-bolt-elements-textSecondary mb-2">Personal Access Token</label>
+                <input
+                  type="password"
+                  value={connection.token}
+                  onChange={(e) => updateVercelConnection({ ...connection, token: e.target.value })}
+                  disabled={connecting}
+                  placeholder="Enter your Vercel personal access token"
+                  className={classNames(
+                    'w-full px-3 py-2 rounded-lg text-sm',
+                    'bg-[#F8F8F8] dark:bg-[#1A1A1A]',
+                    'border border-[#E5E5E5] dark:border-[#333333]',
+                    'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary',
+                    'focus:outline-none focus:ring-1 focus:ring-bolt-elements-borderColorActive',
+                    'disabled:opacity-50',
+                  )}
+                />
+                <div className="mt-2 text-sm text-bolt-elements-textSecondary">
+                  <a
+                    href="https://vercel.com/account/tokens"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-bolt-elements-borderColorActive hover:underline inline-flex items-center gap-1"
+                  >
+                    Get your token
+                    <div className="i-ph:arrow-square-out w-4 h-4" />
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               onClick={handleConnect}
@@ -168,9 +177,6 @@ export default function VercelConnection() {
             </div>
 
             <div className="flex items-center gap-4 p-4 bg-[#F8F8F8] dark:bg-[#1A1A1A] rounded-lg">
-              {/* Debug output */}
-              <pre className="hidden">{JSON.stringify(connection.user, null, 2)}</pre>
-
               <img
                 src={`https://vercel.com/api/www/avatar?u=${connection.user?.username || connection.user?.user?.username}`}
                 referrerPolicy="no-referrer"
