@@ -1,40 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { useStore } from '@nanostores/react';
 import { logStore } from '~/lib/stores/logs';
-import { classNames } from '~/utils/classNames';
-import {
-  vercelConnection,
-  isConnecting,
-  isFetchingStats,
-  updateVercelConnection,
-  fetchVercelStats,
-} from '~/lib/stores/vercel';
+import { vercelConnection, isConnecting, updateVercelConnection, fetchVercelStats } from '~/lib/stores/vercel';
 
 export default function VercelConnection() {
   const connection = useStore(vercelConnection);
   const connecting = useStore(isConnecting);
-  const fetchingStats = useStore(isFetchingStats);
-  const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
 
-  // NEW: Auto-connect from environment variable
+  /*
+   * const fetchingStats = useStore(isFetchingStats); // ❌ Unused
+   * const [isProjectsExpanded, setIsProjectsExpanded] = useState(false); // ❌ Unused
+   */
+
+  // Auto connect using env var
   useEffect(() => {
-    const envToken = import.meta.env.VITE_VERCEL_TOKEN;
+    const tokenFromEnv = import.meta.env.VITE_VERCEL_TOKEN;
 
-    if (envToken && !connection.token) {
-      updateVercelConnection({ ...connection, token: envToken });
+    if (tokenFromEnv && !connection.user && !connection.token) {
+      updateVercelConnection({ user: null, token: tokenFromEnv });
+      handleConnect(new Event('submit') as any);
     }
   }, []);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      if (connection.user && connection.token) {
-        await fetchVercelStats(connection.token);
-      }
-    };
-    fetchProjects();
-  }, [connection.user, connection.token]);
 
   const handleConnect = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -107,14 +95,7 @@ export default function VercelConnection() {
                   onChange={(e) => updateVercelConnection({ ...connection, token: e.target.value })}
                   disabled={connecting}
                   placeholder="Enter your Vercel personal access token"
-                  className={classNames(
-                    'w-full px-3 py-2 rounded-lg text-sm',
-                    'bg-[#F8F8F8] dark:bg-[#1A1A1A]',
-                    'border border-[#E5E5E5] dark:border-[#333333]',
-                    'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary',
-                    'focus:outline-none focus:ring-1 focus:ring-bolt-elements-borderColorActive',
-                    'disabled:opacity-50',
-                  )}
+                  className="w-full px-3 py-2 rounded-lg text-sm bg-[#F8F8F8] dark:bg-[#1A1A1A] border border-[#E5E5E5] dark:border-[#333333] text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary focus:outline-none focus:ring-1 focus:ring-bolt-elements-borderColorActive disabled:opacity-50"
                 />
                 <div className="mt-2 text-sm text-bolt-elements-textSecondary">
                   <a
@@ -133,13 +114,7 @@ export default function VercelConnection() {
             <button
               onClick={handleConnect}
               disabled={connecting || !connection.token}
-              className={classNames(
-                'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
-                'bg-[#303030] text-white',
-                'hover:bg-[#5E41D0] hover:text-white',
-                'disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200',
-                'transform active:scale-95',
-              )}
+              className="px-4 py-2 rounded-lg text-sm flex items-center gap-2 bg-[#303030] text-white hover:bg-[#5E41D0] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform active:scale-95"
             >
               {connecting ? (
                 <>
@@ -155,139 +130,13 @@ export default function VercelConnection() {
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleDisconnect}
-                  className={classNames(
-                    'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
-                    'bg-red-500 text-white',
-                    'hover:bg-red-600',
-                  )}
-                >
-                  <div className="i-ph:plug w-4 h-4" />
-                  Disconnect
-                </button>
-                <span className="text-sm text-bolt-elements-textSecondary flex items-center gap-1">
-                  <div className="i-ph:check-circle w-4 h-4 text-green-500" />
-                  Connected to Vercel
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F8F8F8] dark:bg-[#1A1A1A] rounded-lg">
-              <img
-                src={`https://vercel.com/api/www/avatar?u=${connection.user?.username || connection.user?.user?.username}`}
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-                alt="User Avatar"
-                className="w-12 h-12 rounded-full border-2 border-bolt-elements-borderColorActive"
-              />
-              <div>
-                <h4 className="text-sm font-medium text-bolt-elements-textPrimary">
-                  {connection.user?.username || connection.user?.user?.username || 'Vercel User'}
-                </h4>
-                <p className="text-sm text-bolt-elements-textSecondary">
-                  {connection.user?.email || connection.user?.user?.email || 'No email available'}
-                </p>
-              </div>
-            </div>
-
-            {fetchingStats ? (
-              <div className="flex items-center gap-2 text-sm text-bolt-elements-textSecondary">
-                <div className="i-ph:spinner-gap w-4 h-4 animate-spin" />
-                Fetching Vercel projects...
-              </div>
-            ) : (
-              <div>
-                <button
-                  onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
-                  className="w-full bg-transparent text-left text-sm font-medium text-bolt-elements-textPrimary mb-3 flex items-center gap-2"
-                >
-                  <div className="i-ph:buildings w-4 h-4" />
-                  Your Projects ({connection.stats?.totalProjects || 0})
-                  <div
-                    className={classNames(
-                      'i-ph:caret-down w-4 h-4 ml-auto transition-transform',
-                      isProjectsExpanded ? 'rotate-180' : '',
-                    )}
-                  />
-                </button>
-                {isProjectsExpanded && connection.stats?.projects?.length ? (
-                  <div className="grid gap-3">
-                    {connection.stats.projects.map((project) => (
-                      <a
-                        key={project.id}
-                        href={`https://vercel.com/dashboard/${project.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block p-4 rounded-lg border border-bolt-elements-borderColor hover:border-bolt-elements-borderColorActive transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h5 className="text-sm font-medium text-bolt-elements-textPrimary flex items-center gap-2">
-                              <div className="i-ph:globe w-4 h-4 text-bolt-elements-borderColorActive" />
-                              {project.name}
-                            </h5>
-                            <div className="flex items-center gap-2 mt-2 text-xs text-bolt-elements-textSecondary">
-                              {project.targets?.production?.alias && project.targets.production.alias.length > 0 ? (
-                                <>
-                                  <a
-                                    href={`https://${project.targets.production.alias.find((a: string) => a.endsWith('.vercel.app') && !a.includes('-projects.vercel.app')) || project.targets.production.alias[0]}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-bolt-elements-borderColorActive"
-                                  >
-                                    {project.targets.production.alias.find(
-                                      (a: string) => a.endsWith('.vercel.app') && !a.includes('-projects.vercel.app'),
-                                    ) || project.targets.production.alias[0]}
-                                  </a>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <div className="i-ph:clock w-3 h-3" />
-                                    {new Date(project.createdAt).toLocaleDateString()}
-                                  </span>
-                                </>
-                              ) : project.latestDeployments && project.latestDeployments.length > 0 ? (
-                                <>
-                                  <a
-                                    href={`https://${project.latestDeployments[0].url}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-bolt-elements-borderColorActive"
-                                  >
-                                    {project.latestDeployments[0].url}
-                                  </a>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <div className="i-ph:clock w-3 h-3" />
-                                    {new Date(project.latestDeployments[0].created).toLocaleDateString()}
-                                  </span>
-                                </>
-                              ) : null}
-                            </div>
-                          </div>
-                          {project.framework && (
-                            <div className="text-xs text-bolt-elements-textSecondary px-2 py-1 rounded-md bg-[#F0F0F0] dark:bg-[#252525]">
-                              <span className="flex items-center gap-1">
-                                <div className="i-ph:code w-3 h-3" />
-                                {project.framework}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                ) : isProjectsExpanded ? (
-                  <div className="text-sm text-bolt-elements-textSecondary flex items-center gap-2">
-                    <div className="i-ph:info w-4 h-4" />
-                    No projects found in your Vercel account
-                  </div>
-                ) : null}
-              </div>
-            )}
+          <div className="mt-4">
+            <button
+              onClick={handleDisconnect}
+              className="px-4 py-2 bg-[#E53E3E] text-white rounded-lg text-sm hover:bg-[#C53030]"
+            >
+              Disconnect
+            </button>
           </div>
         )}
       </div>
