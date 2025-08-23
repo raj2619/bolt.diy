@@ -29,18 +29,21 @@ export function SupabaseConnection() {
       console.log('[Supabase] Auto-connecting using env token');
       updateToken(envToken);
 
-      handleConnect().then(() => {
-        fetchSupabaseStats(envToken)
-          .then(() => {
+      handleConnect()
+        .then(() => {
+          // Delay to allow store to populate stats
+          setTimeout(() => {
             const projectId = supabaseConn.stats?.projects?.[0]?.id;
 
             if (projectId) {
               selectProject(projectId);
               fetchProjectApiKeys(projectId).catch(console.error);
+            } else {
+              console.warn('No Supabase projects found.');
             }
-          })
-          .catch(console.error);
-      });
+          }, 500); // 500ms delay
+        })
+        .catch(console.error);
     }
   }, []);
 

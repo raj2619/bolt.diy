@@ -20,12 +20,15 @@ export default function VercelConnection() {
 
     if (tokenFromEnv && !connection.user && !connection.token) {
       updateVercelConnection({ user: null, token: tokenFromEnv });
-      handleConnect(new Event('submit') as any);
+
+      setTimeout(() => {
+        handleConnect(); // no fake event
+      }, 300);
     }
   }, []);
 
-  const handleConnect = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleConnect = async (event?: React.FormEvent) => {
+    event?.preventDefault?.();
     isConnecting.set(true);
 
     try {
